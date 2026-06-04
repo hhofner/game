@@ -27,17 +27,27 @@ interface SelectionData {
 export const MAX_SELECTION = 3
 
 // The user's selection for the current matchday, persisted to Supabase.
-// Shared across components via a fixed useAsyncData key.
+// Backed by shared useState so optimistic updates are reactive everywhere.
 export function useSelection() {
-  const { data, pending, refresh } = useAsyncData<SelectionData>(
-    'current-selection',
-    () => $fetch('/api/selection'),
-    { default: () => ({ matchday: null, players: [], autoFilled: false }), server: false }
-  )
+  const players = useState<Player[]>('selection-players', () => [])
+  const matchday = useState<SelectionMatchday | null>('selection-matchday', () => null)
+  const loaded = useState('selection-loaded', () => false)
+  const saving = useState('selection-saving', () => false)
+  const toast = useToast()
 
-  const players = computed<Player[]>(() => (data.value?.players ?? []) as Player[])
-  const matchday = computed(() => data.value?.matchday ?? null)
-  const selected = players
+  async function load(force = false) {
+    if (loaded.value && !force) return
+    try {
+      const d = await $fetch<SelectionData>('/api/selection')
+      players.value = d.players ?? []
+      matchday.value = d.matchday ?? null
+      loaded.value = true
+    } catch {
+      // not authenticated yet / nothing to load
+    }
+  }
+
+  const selected = computed(() => players.value)
   const count = computed(() => players.value.length)
   const isFull = computed(() => count.value >= MAX_SELECTION)
   const isSelected = (id: string) => players.value.some(p => p.id === id)
@@ -49,20 +59,13 @@ export function useSelection() {
     return s.slice(0, MAX_SELECTION)
   })
 
-  const toast = useToast()
-  const saving = useState('selection-saving', () => false)
-
-  function setPlayers(next: Player[]) {
-    if (data.value) data.value.players = next
-  }
-
   async function persist() {
     saving.value = true
     try {
       await $fetch('/api/selection', { method: 'PUT', body: { playerIds: players.value.map(p => p.id) } })
     } catch {
       toast.add({ title: 'Could not save your selection', color: 'error', icon: 'i-lucide-triangle-alert' })
-      await refresh() // revert optimistic change to server truth
+      await load(true) // revert to server truth
     } finally {
       saving.value = false
     }
@@ -70,12 +73,12 @@ export function useSelection() {
 
   async function select(player: Player) {
     if (isSelected(player.id) || players.value.length >= MAX_SELECTION) return
-    setPlayers([...players.value, player])
+    players.value = [...players.value, player]
     await persist()
   }
 
   async function removeById(id: string) {
-    setPlayers(players.value.filter(p => p.id !== id))
+    players.value = players.value.filter(p => p.id !== id)
     await persist()
   }
 
@@ -97,13 +100,13 @@ export function useSelection() {
     while (next.length < MAX_SELECTION && available.length) {
       next.push(available.splice(Math.floor(Math.random() * available.length), 1)[0]!)
     }
-    setPlayers(next)
+    players.value = next
     await persist()
     toast.add({ title: 'Filled your empty slots', icon: 'i-lucide-dice-5' })
   }
 
   return {
     selection, selected, matchday, count, isFull, isSelected,
-    select, removeAt, removeById, replaceById, autoFill, pending, saving, refresh
+    select, removeAt, removeById, replaceById, autoFill, saving, load
   }
 }

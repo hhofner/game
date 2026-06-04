@@ -2,6 +2,10 @@
 const route = useRoute()
 const pageTitle = computed(() => route.meta.title || 'Game')
 
+// Load the user's saved selection once on app start.
+const { load: loadSelection } = useSelection()
+onMounted(() => loadSelection())
+
 // Show last matchday's results once, when the user returns after it finished.
 const resultsOpen = ref(false)
 const resultsPrev = ref([])
