@@ -3,6 +3,7 @@
 
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
+  --font-fancy: 'Pacifico', cursive;
 
   /* Black primary scale */
   --color-black-50: #f6f6f6;

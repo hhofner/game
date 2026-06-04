@@ -3,7 +3,10 @@ definePageMeta({
   title: 'Profile'
 })
 
-const { username, avatar } = useProfile()
+const { avatar } = useProfile()
+const { user, logout } = useAuth()
+
+const username = computed(() => user.value?.name || 'Player')
 </script>
 
 <template>
@@ -20,14 +23,46 @@ const { username, avatar } = useProfile()
         {{ username }}
       </h2>
 
-      <GifPicker v-model="avatar" />
+      <CoachPicker v-model="avatar" />
     </div>
 
     <!-- Rules of the game -->
     <SectionCard
       title="Rules of the Game"
       icon="i-lucide-book-open"
-      empty-text="No rules yet"
+    >
+      <div class="flex flex-col gap-3 text-sm text-muted">
+        <p>
+          It's a soccer game. Every matchday comes with a
+          <span class="font-medium text-default">challenge</span>, a set of
+          criteria your players need to match.
+        </p>
+        <p>
+          Your job is to select
+          <span class="font-medium text-default">up to three players</span> that
+          fit that matchday's challenge.
+        </p>
+        <p>
+          You earn points based on how well your picks match the criteria. The
+          point system changes from matchday to matchday, so the same pick can
+          be worth more or less depending on the challenge.
+        </p>
+        <p>
+          Scoring only applies to players who actually play in that matchday. If
+          one of your picks doesn't feature, they won't earn you any points.
+        </p>
+      </div>
+    </SectionCard>
+
+    <UButton
+      label="Log out"
+      icon="i-lucide-log-out"
+      color="neutral"
+      variant="subtle"
+      block
+      @click="logout"
     />
+
+    <AppFooter />
   </div>
 </template>

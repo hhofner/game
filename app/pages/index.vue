@@ -115,5 +115,7 @@ const { selection, removeAt } = useSelection()
         />
       </div>
     </SectionCard>
+
+    <AppFooter />
   </div>
 </template>

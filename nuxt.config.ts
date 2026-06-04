@@ -20,7 +20,9 @@ export default defineNuxtConfig({
     '/matchdays': { prerender: true },
     '/leaderboard': { prerender: true },
     '/players': { prerender: true },
-    '/profile': { prerender: true }
+    '/profile': { prerender: true },
+    '/login': { prerender: true },
+    '/register': { prerender: true }
   },
 
   compatibilityDate: '2025-01-15',

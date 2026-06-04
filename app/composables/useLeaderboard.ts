@@ -12,6 +12,14 @@ const players = [
 
 export const totalMatchdays = 5
 
+// How many matchdays have finished (the rest are upcoming)
+export const finishedMatchdays = 4
+
+// The current user's points earned per matchday
+export function yourPoints() {
+  return players.find(p => p.isYou)?.points ?? []
+}
+
 // Medal colors for the top 3 (gold / silver / bronze)
 export function rankBadgeClass(rank: number) {
   if (rank === 1) return 'bg-yellow-400 text-yellow-950'

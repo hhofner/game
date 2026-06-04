@@ -7,7 +7,10 @@ useHead({
     }
   ],
   link: [
-    { rel: 'icon', href: '/favicon.ico' }
+    { rel: 'icon', href: '/favicon.ico' },
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap' }
   ],
   htmlAttrs: {
     lang: 'en'
@@ -24,32 +27,12 @@ useSeoMeta({
   ogDescription: description,
   twitterCard: 'summary_large_image'
 })
-
-const route = useRoute()
-const pageTitle = computed(() => route.meta.title || 'Game')
 </script>
 
 <template>
   <UApp>
-    <!-- Backdrop fills the viewport on larger screens -->
-    <div class="flex h-[100dvh] w-full justify-center bg-muted">
-      <!-- Mobile-only viewport -->
-      <div class="relative flex h-[100dvh] w-full max-w-[28rem] flex-col overflow-hidden bg-default shadow-xl">
-        <!-- Top title bar -->
-        <header class="flex h-14 shrink-0 items-center justify-center border-b border-default px-4">
-          <h1 class="text-lg font-semibold tracking-tight">
-            {{ pageTitle }}
-          </h1>
-        </header>
-
-        <!-- Scrollable screen content -->
-        <main class="flex-1 overflow-y-auto pb-28">
-          <NuxtPage />
-        </main>
-
-        <!-- Glass bottom navigation -->
-        <BottomNav />
-      </div>
-    </div>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </UApp>
 </template>
