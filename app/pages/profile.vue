@@ -3,7 +3,7 @@ definePageMeta({
   title: 'Profile'
 })
 
-const username = 'Player One'
+const { username, avatar } = useProfile()
 </script>
 
 <template>
@@ -11,12 +11,16 @@ const username = 'Player One'
     <!-- User -->
     <div class="flex flex-col items-center gap-3 py-4">
       <UAvatar
+        :src="avatar || undefined"
+        :alt="username"
         icon="i-lucide-user"
         size="3xl"
       />
       <h2 class="text-lg font-semibold">
         {{ username }}
       </h2>
+
+      <GifPicker v-model="avatar" />
     </div>
 
     <!-- Rules of the game -->

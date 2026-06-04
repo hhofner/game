@@ -2,14 +2,15 @@
 defineProps({
   title: { type: String, required: true },
   icon: { type: String, default: 'i-lucide-inbox' },
-  emptyText: { type: String, default: 'Nothing here yet' }
+  emptyText: { type: String, default: 'Nothing here yet' },
+  ui: { type: Object, default: () => ({}) }
 })
 
 const slots = useSlots()
 </script>
 
 <template>
-  <UCard>
+  <UCard :ui="ui">
     <template #header>
       <h3 class="text-sm font-semibold">
         {{ title }}

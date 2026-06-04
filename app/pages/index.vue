@@ -9,13 +9,22 @@ const matches = [
   { home: { name: 'Spain', flag: 'es' }, away: { name: 'Portugal', flag: 'pt' } }
 ]
 
-const selection = ref([false, false, false])
+const upcomingMatches = [
+  { home: { name: 'England', flag: 'gb-eng' }, away: { name: 'Italy', flag: 'it' } },
+  { home: { name: 'Netherlands', flag: 'nl' }, away: { name: 'Belgium', flag: 'be' } },
+  { home: { name: 'Croatia', flag: 'hr' }, away: { name: 'Japan', flag: 'jp' } }
+]
 
 const topThree = standingsAt(totalMatchdays).slice(0, 3)
+const { avatar: profileAvatar } = useProfile()
+const { selection, removeAt } = useSelection()
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 p-4">
+  <div class="relative flex min-h-full flex-col gap-4 bg-muted p-4">
+    <!-- Subtle backdrop accent so the section cards stand out -->
+    <div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 bg-gradient-to-b from-primary/10 to-transparent" />
+
     <!-- Current Matchday -->
     <SectionCard
       title="Current Matchday"
@@ -50,12 +59,14 @@ const topThree = standingsAt(totalMatchdays).slice(0, 3)
     <SectionCard
       title="Your Selection"
       icon="i-lucide-clipboard-list"
+      :ui="{ body: 'p-3 sm:p-3' }"
     >
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-3 gap-2">
         <SelectionSlot
-          v-for="(_, i) in selection"
+          v-for="(player, i) in selection"
           :key="i"
-          v-model="selection[i]"
+          :player="player"
+          @remove="removeAt(i)"
         />
       </div>
     </SectionCard>
@@ -69,11 +80,21 @@ const topThree = standingsAt(totalMatchdays).slice(0, 3)
         <div
           v-for="player in topThree"
           :key="player.name"
-          class="flex items-center gap-3 rounded-lg border border-default bg-elevated/40 p-2.5"
+          class="flex items-center gap-3 rounded-lg border border-default p-2.5"
+          :class="rankRowClass(player.rank) || 'bg-elevated/40'"
         >
-          <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-inverted">
+          <span
+            class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
+            :class="rankBadgeClass(player.rank)"
+          >
             {{ player.rank }}
           </span>
+          <UAvatar
+            :src="(player.isYou ? profileAvatar : player.avatar) || undefined"
+            :alt="player.name"
+            icon="i-lucide-user"
+            size="2xs"
+          />
           <span class="flex-1 truncate text-sm font-medium">{{ player.name }}</span>
           <span class="text-sm font-semibold tabular-nums">{{ player.points }}</span>
         </div>
@@ -84,6 +105,15 @@ const topThree = standingsAt(totalMatchdays).slice(0, 3)
     <SectionCard
       title="Upcoming Matchday"
       icon="i-lucide-calendar-days"
-    />
+    >
+      <div class="flex flex-col gap-2">
+        <MatchCard
+          v-for="match in upcomingMatches"
+          :key="`${match.home.flag}-${match.away.flag}`"
+          :home="match.home"
+          :away="match.away"
+        />
+      </div>
+    </SectionCard>
   </div>
 </template>
