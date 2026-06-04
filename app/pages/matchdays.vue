@@ -3,10 +3,10 @@ definePageMeta({
   title: 'Matchdays'
 })
 
-const { matchdays } = useMatchdays()
+const { data: matchdays, pending } = await useFetch('/api/matchdays')
 
-function total(md) {
-  return md.picks.reduce((sum, p) => sum + p.points, 0)
+function score(g) {
+  return g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : 'VS'
 }
 </script>
 
@@ -25,31 +25,34 @@ function total(md) {
       </p>
     </div>
 
-    <!-- Matchdays -->
-    <div class="flex flex-col gap-2">
+    <div
+      v-if="pending"
+      class="flex flex-col gap-2"
+    >
+      <USkeleton
+        v-for="n in 4"
+        :key="n"
+        class="h-11 w-full"
+      />
+    </div>
+
+    <div
+      v-else
+      class="flex flex-col gap-2"
+    >
       <UCollapsible
-        v-for="md in matchdays"
+        v-for="(md, i) in matchdays"
         :key="md.number"
         class="group"
-        :default-open="md.number === 4"
+        :default-open="i === 0"
       >
         <button
           type="button"
           class="flex w-full items-center justify-between gap-2 rounded-lg border border-default p-3 text-left"
         >
-          <span class="text-sm font-semibold">Matchday {{ md.number }}</span>
+          <span class="text-sm font-semibold">{{ md.label }}</span>
           <span class="flex items-center gap-2">
-            <span
-              v-if="md.finished"
-              class="text-sm font-bold tabular-nums text-primary"
-            >+{{ total(md) }} pts</span>
-            <UBadge
-              v-else
-              label="Upcoming"
-              color="neutral"
-              variant="soft"
-              size="sm"
-            />
+            <span class="text-xs text-muted">{{ md.games.length }} games</span>
             <UIcon
               name="i-lucide-chevron-down"
               class="size-4 text-dimmed transition-transform duration-200 group-data-[state=open]:rotate-180"
@@ -59,27 +62,14 @@ function total(md) {
 
         <template #content>
           <div class="flex flex-col gap-4 p-3">
-            <!-- Challenge details -->
+            <!-- Challenge (placeholder until the challenge pool is authored) -->
             <div>
               <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
                 Challenge
               </p>
-              <p class="text-sm font-medium">
-                {{ md.challenge.name }}
+              <p class="text-sm text-dimmed">
+                Coming soon.
               </p>
-              <ul class="mt-1.5 flex flex-col gap-1">
-                <li
-                  v-for="c in md.challenge.criteria"
-                  :key="c"
-                  class="flex items-start gap-2 text-xs text-muted"
-                >
-                  <UIcon
-                    name="i-lucide-target"
-                    class="mt-0.5 size-3.5 shrink-0"
-                  />
-                  {{ c }}
-                </li>
-              </ul>
             </div>
 
             <!-- Games -->
@@ -89,49 +79,13 @@ function total(md) {
               </p>
               <div class="flex flex-col gap-2">
                 <MatchCard
-                  v-for="game in md.games"
-                  :key="`${game.home.flag}-${game.away.flag}`"
-                  :home="game.home"
-                  :away="game.away"
+                  v-for="(g, gi) in md.games"
+                  :key="gi"
+                  :home="g.home"
+                  :away="g.away"
+                  :middle="score(g)"
                 />
               </div>
-            </div>
-
-            <!-- Your players -->
-            <div>
-              <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                Your players
-              </p>
-              <div
-                v-if="md.picks.length"
-                class="flex flex-col gap-1.5"
-              >
-                <div
-                  v-for="p in md.picks"
-                  :key="p.name"
-                  class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 p-2"
-                >
-                  <UIcon
-                    :name="`i-circle-flags-${p.flag}`"
-                    class="size-5 shrink-0"
-                  />
-                  <span class="flex-1 truncate text-sm font-medium">{{ p.name }}</span>
-                  <span
-                    v-if="md.finished"
-                    class="text-sm font-bold tabular-nums text-primary"
-                  >+{{ p.points }}</span>
-                  <span
-                    v-else
-                    class="text-xs text-dimmed"
-                  >pending</span>
-                </div>
-              </div>
-              <p
-                v-else
-                class="text-xs text-muted"
-              >
-                You didn't select any players for this matchday.
-              </p>
             </div>
           </div>
         </template>
