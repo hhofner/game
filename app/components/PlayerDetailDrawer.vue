@@ -11,9 +11,9 @@ const selected = computed(() => !!props.player && isSelected(props.player.id))
 
 const stats = computed(() => props.player
   ? [
-      { label: 'Goals', value: props.player.goals },
-      { label: 'Assists', value: props.player.assists },
-      { label: 'Apps', value: props.player.apps }
+      { label: 'Goals', value: props.player.goals ?? 0 },
+      { label: 'Assists', value: props.player.assists ?? 0 },
+      { label: 'Apps', value: props.player.apps ?? 0 }
     ]
   : [])
 
@@ -43,7 +43,7 @@ function onReplace() {
         class="flex flex-col items-center gap-3 pb-2 text-center"
       >
         <UAvatar
-          :src="player.avatar || undefined"
+          :src="player.photo || undefined"
           :alt="player.name"
           icon="i-lucide-user"
           size="3xl"
@@ -54,21 +54,24 @@ function onReplace() {
             {{ player.name }}
           </h3>
           <span class="flex items-center gap-1.5 text-sm text-muted">
-            <UIcon
-              :name="`i-circle-flags-${player.flag}`"
-              class="size-4 shrink-0"
+            <UAvatar
+              v-if="player.teamLogo"
+              :src="player.teamLogo"
+              :alt="player.nation"
+              size="3xs"
             />
-            {{ player.nation }} · {{ player.club }}
+            {{ player.nation }}
           </span>
         </div>
 
         <UBadge
+          v-if="player.position"
           :label="player.position"
           color="neutral"
           variant="soft"
         />
 
-        <!-- Extra info -->
+        <!-- Tournament totals -->
         <div class="grid w-full grid-cols-3 gap-2 pt-1">
           <div
             v-for="stat in stats"

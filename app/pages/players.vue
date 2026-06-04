@@ -3,8 +3,8 @@ definePageMeta({
   title: 'Players'
 })
 
-const { players } = usePlayers()
 const { selected, isSelected } = useSelection()
+const { data: players, pending } = await useFetch('/api/players', { default: () => [] })
 
 // Query is driven by the morphed search bar in the bottom nav
 const search = useState('playerSearch', () => '')
@@ -12,9 +12,11 @@ const position = ref()
 const nation = ref()
 
 const positions = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward']
-const nations = ['France', 'Germany', 'Brazil', 'Argentina', 'Spain', 'Portugal', 'Italy', 'England']
+const nations = computed(() =>
+  [...new Set(players.value.map(p => p.nation).filter(Boolean))].sort()
+)
 
-const filtered = computed(() => players.filter(p =>
+const filtered = computed(() => players.value.filter(p =>
   (!search.value || p.name.toLowerCase().includes(search.value.toLowerCase()))
   && (!position.value || p.position === position.value)
   && (!nation.value || p.nation === nation.value)
@@ -58,7 +60,7 @@ function openPlayer(player) {
             @click="openPlayer(player)"
           >
             <UAvatar
-              :src="player.avatar || undefined"
+              :src="player.photo || undefined"
               :alt="player.name"
               icon="i-lucide-user"
               size="sm"
@@ -68,13 +70,9 @@ function openPlayer(player) {
                 {{ player.name }}
               </p>
               <p class="text-xs text-muted">
-                {{ player.position }}
+                {{ player.position || player.nation }}
               </p>
             </div>
-            <UIcon
-              :name="`i-circle-flags-${player.flag}`"
-              class="size-5 shrink-0"
-            />
           </button>
         </div>
         <EmptyState
@@ -102,7 +100,17 @@ function openPlayer(player) {
 
     <!-- Results -->
     <div
-      v-if="filtered.length"
+      v-if="pending"
+      class="flex flex-col gap-2"
+    >
+      <USkeleton
+        v-for="n in 6"
+        :key="n"
+        class="h-14 w-full"
+      />
+    </div>
+    <div
+      v-else-if="filtered.length"
       class="flex flex-col gap-2"
     >
       <button
@@ -113,7 +121,7 @@ function openPlayer(player) {
         @click="openPlayer(player)"
       >
         <UAvatar
-          :src="player.avatar || undefined"
+          :src="player.photo || undefined"
           :alt="player.name"
           icon="i-lucide-user"
           size="sm"
@@ -123,16 +131,18 @@ function openPlayer(player) {
             {{ player.name }}
           </p>
           <p class="flex items-center gap-1 text-xs text-muted">
-            <UIcon
-              :name="`i-circle-flags-${player.flag}`"
-              class="size-3.5 shrink-0"
+            <UAvatar
+              v-if="player.teamLogo"
+              :src="player.teamLogo"
+              :alt="player.nation"
+              size="3xs"
             />
-            {{ player.nation }} · {{ player.position }}
+            {{ player.nation }} · {{ player.position || '—' }}
           </p>
         </div>
         <UIcon
           v-if="isSelected(player.id)"
-          name="i-lucide-check-circle-2"
+          name="i-lucide-circle-check"
           class="size-5 shrink-0 text-primary"
         />
         <UIcon

@@ -26,7 +26,7 @@ defineEmits(['remove'])
     class="flex aspect-[3/4] flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-primary/60 bg-primary/5 p-2 text-center"
   >
     <UAvatar
-      :src="player.avatar || undefined"
+      :src="player.photo || undefined"
       :alt="player.name"
       icon="i-lucide-user"
       size="md"
@@ -36,11 +36,13 @@ defineEmits(['remove'])
       {{ player.name }}
     </span>
     <span class="flex items-center gap-1 text-[0.65rem] text-muted">
-      <UIcon
-        :name="`i-circle-flags-${player.flag}`"
-        class="size-3 shrink-0"
+      <UAvatar
+        v-if="player.teamLogo"
+        :src="player.teamLogo"
+        :alt="player.nation"
+        size="3xs"
       />
-      {{ player.position }}
+      {{ player.position || player.nation }}
     </span>
 
     <div class="flex gap-1">

@@ -1,15 +1,22 @@
-import type { Player } from './usePlayers'
+export interface Player {
+  id: string
+  name: string
+  photo: string | null
+  position: string | null
+  nation: string | null
+  teamLogo: string | null
+  goals?: number
+  assists?: number
+  apps?: number
+}
 
 export const MAX_SELECTION = 3
 
-// The user's selected players for the current matchday (fixed slots, nullable)
+// The user's selected players for the current matchday (fixed slots, nullable).
 export function useSelection() {
-  const selection = useState<(Player | null)[]>('selection', () => {
-    const { players } = usePlayers()
-    return [players[0] ?? null, null, null]
-  })
+  const selection = useState<(Player | null)[]>('selection', () => [null, null, null])
 
-  const isSelected = (id: number) => selection.value.some(p => p?.id === id)
+  const isSelected = (id: string) => selection.value.some(p => p?.id === id)
   const count = computed(() => selection.value.filter(Boolean).length)
   const isFull = computed(() => count.value >= MAX_SELECTION)
   const selected = computed(() => selection.value.filter(Boolean) as Player[])
@@ -24,25 +31,25 @@ export function useSelection() {
     selection.value[i] = null
   }
 
-  function removeById(id: number) {
+  function removeById(id: string) {
     const i = selection.value.findIndex(p => p?.id === id)
     if (i !== -1) selection.value[i] = null
   }
 
-  function replaceById(id: number) {
+  function replaceById(id: string) {
     removeById(id)
     navigateTo('/players')
   }
 
-  // Fill any empty slots with random players (mirrors the kickoff auto-fill rule)
-  function autoFill() {
-    const { players } = usePlayers()
+  // Fill empty slots with random players (mirrors the kickoff auto-fill rule).
+  async function autoFill() {
+    const pool = await $fetch<Player[]>('/api/players')
     const taken = new Set(selection.value.filter(Boolean).map(p => p!.id))
-    const pool = players.filter(p => !taken.has(p.id))
+    const available = pool.filter(p => !taken.has(p.id))
     for (let i = 0; i < selection.value.length; i++) {
-      if (selection.value[i] || !pool.length) continue
-      const idx = Math.floor(Math.random() * pool.length)
-      selection.value[i] = pool.splice(idx, 1)[0] ?? null
+      if (selection.value[i] || !available.length) continue
+      const idx = Math.floor(Math.random() * available.length)
+      selection.value[i] = available.splice(idx, 1)[0] ?? null
     }
   }
 
