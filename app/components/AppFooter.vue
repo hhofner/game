@@ -4,6 +4,6 @@
       to="https://hhofner.com"
       target="_blank"
       class="font-fancy text-sm text-muted hover:text-default"
-    >deez nuts</ULink>
+    >Hans</ULink>
   </footer>
 </template>
