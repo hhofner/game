@@ -37,17 +37,16 @@ This is a **mobile-only** web game (fantasy-soccer style: each matchday has a ch
 - `useAuth` — wraps **Supabase Auth** (email + password) via `useSupabaseClient`/`useSupabaseUser`. Register keeps the `deez-nuts` invite gate and stores `username` in user metadata (a SQL trigger creates the `profiles` row). `middleware/auth.global.ts` redirects via `useSupabaseUser` (auth pages allow-listed).
 - `useAppMode` — reads `NUXT_PUBLIC_APP_MODE` (`testing` default | `production`). `isTesting` gates the beta banner, the leaderboard results-animation test panel, and `/api/_sandbox/*` + `/api/admin/*` routes. Production flip = set the env var; those affordances vanish.
 - `useProfile` — username + chosen avatar URL. The avatar flows into the leaderboard "You" row and selection slots.
-- `usePlayers` / `useSelection` — player pool and the up-to-three selection slots (shared between the home selection UI and the player detail drawer).
-- `useLeaderboard` — `standingsAt(matchday)` computes cumulative standings; also exports `rankBadgeClass`/`rankRowClass` (top-3 medal colors) used by both the table and the home preview.
-- `useMatchdays` — per-matchday challenge + your picks/points. Per-player points sum to each matchday total and stay consistent with `useLeaderboard`.
+- `useSelection` — the up-to-three picks for the current matchday, **server-backed** via shared `useState` + `load()` (loaded once in the default layout); `select`/`removeAt`/`autoFill` update optimistically then PUT `/api/selection`. Data now comes from `/api/players`, `/api/matchdays`, `/api/leaderboard` (real Supabase); pages use `useFetch`. (`useLeaderboard` lingers only for `rankBadgeClass`/`rankRowClass` + the dev results-animation test panel.)
 - `useCoaches` — 20 coach profile-picture options; **generated from the Wikipedia API** (Wikimedia Commons image URLs), not hand-written.
 
 **Half-sheets.** Drawers (`UDrawer`, e.g. `PlayerDetailDrawer`, `MatchdayResultsModal`) are the bottom-sheet pattern. The results animation uses `TransitionGroup` FLIP reordering plus CSS keyframes defined in `app/assets/css/main.css`.
 
 **Backend / data (`server/`).** Secrets stay server-side; the client only hits our own `/api` (+ Supabase Auth).
-- `server/utils/apifootball.ts` — API-Football client (`x-apisports-key`). `WC_LEAGUE_ID = 1`. `wcSeason()` returns **2022 in testing, 2026 in production** (Free plan only covers 2022–2024, so WC2022 is the real testing dataset). `mapRound()` maps `league.round` strings → matchday slots.
-- `server/api/admin/*` (testing-only) — ingestion, e.g. `ingest-structure` pulls teams/matchdays/matches in one call. Writes via `serverSupabaseServiceRole` (the secret key). DB types aren't generated yet, so the service client is cast to a loose `SupabaseClient`.
-- `supabase/migrations/*.sql` — schema (apply with `supabase db push`). Tables, the challenge pool, `manual_awards`, RLS, the `leaderboard` view, and the profile-on-signup trigger.
+- `server/utils/apifootball.ts` — API-Football client (`x-apisports-key`). `WC_LEAGUE_ID = 1`. `wcSeason()` returns **2022 in testing, 2026 in production** (Free plan covers 2022–2024 + ~10 req/min, so WC2022 is the testing dataset; ingestion must stay paced). `classifyRound()` splits rounds into `early` (group/R32/R16, one matchday per date) vs `late` (QF/SF/final, one matchday per round).
+- `server/api/admin/*` (testing-only): `ingest-structure`, `ingest-stats` (paced), `seed-challenges`, `seed-users` (bots), `compute-scores`, `lock-matchday`, `manual-award`, and `clock` (the simulated clock: `reset`/`advance`). Reusable logic lives in `server/utils/` (`lockMatchdayById`, `computeScores`, `clock` get/setNow, `cumulativeStandings`).
+- **AUTH GOTCHA:** the new Supabase asymmetric JWT keys make `serverSupabaseUser().id` come back **null** and `serverSupabaseClient` lacks RLS auth context on server routes. Always get the user id via `getUserId(event)` (`server/utils/auth.ts`, reads the token `sub`) and do DB work with `serverSupabaseServiceRole` scoped to that id. Service client is cast to a loose `SupabaseClient`; generated types are in `app/types/database.types.ts`.
+- `supabase/migrations/*.sql` — schema, applied with `supabase db push` (Claude does this; project is linked). **Never edit an applied migration — add a new file.** Date-based matchday model uses `matchdays.natural_key`; `app_config` holds the sim clock.
 
 ## Conventions
 
