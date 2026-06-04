@@ -9,7 +9,10 @@ const POOL = [
   { key: 'fair-play', title: 'Fair Play', tier: 'early', kind: 'stat', criteria: ['Stay on the pitch', 'Cards cost you'], scoring_rules: { goals: 4, assists: 3, appearance: 2, yellow: -2, red: -5 } },
   { key: 'clutch', title: 'Clutch Performers', tier: 'late', kind: 'stat', criteria: ['Knockout goals are huge', 'Show up on the big stage'], scoring_rules: { goals: 8, assists: 5, appearance: 2 } },
   { key: 'iron-defense', title: 'Iron Defense', tier: 'late', kind: 'stat', criteria: ['Clean sheets win knockouts'], scoring_rules: { clean_sheet: 8, goals: 4, assists: 3, appearance: 2 } },
-  { key: 'big-game', title: 'Big Game', tier: 'late', kind: 'stat', criteria: ['Everything matters now', 'No red cards'], scoring_rules: { goals: 7, assists: 4, clean_sheet: 4, appearance: 2, red: -5 } }
+  { key: 'big-game', title: 'Big Game', tier: 'late', kind: 'stat', criteria: ['Everything matters now', 'No red cards'], scoring_rules: { goals: 7, assists: 4, clean_sheet: 4, appearance: 2, red: -5 } },
+  // Manual (adjudicated) challenges — the fun ones no stats feed reports.
+  { key: 'backflip', title: 'Backflip Bonus', tier: 'early', kind: 'manual', criteria: ['Pick a player who does a backflip celebration'], scoring_rules: { achieved: 12 } },
+  { key: 'shush', title: 'Shush the Crowd', tier: 'late', kind: 'manual', criteria: ['Pick a player who scores then shushes the crowd'], scoring_rules: { achieved: 15 } }
 ]
 
 export default defineEventHandler(async (event) => {
