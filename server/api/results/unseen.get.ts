@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 const toModalRow = (s: { rank: number, userId: string, username: string, avatar: string | null, points: number }, meId: string) => ({
   rank: s.rank,
@@ -18,9 +18,8 @@ export default defineEventHandler(async (event) => {
 
   let userId = (cfg.public.appMode !== 'production' && getQuery(event).userId as string) || ''
   if (!userId) {
-    const user = await serverSupabaseUser(event)
-    if (!user) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
-    userId = user.id
+    userId = (await getUserId(event)) ?? ''
+    if (!userId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
 
   const { data: prof } = await db.from('profiles').select('last_seen_matchday').eq('id', userId).maybeSingle()

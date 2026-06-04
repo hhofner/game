@@ -3,7 +3,7 @@ definePageMeta({
   title: 'Home'
 })
 
-const { selection, removeAt, isFull, autoFill } = useSelection()
+const { selection, removeAt, isFull, autoFill, saving } = useSelection()
 
 const { data: matchdays } = await useFetch('/api/matchdays', { default: () => [] })
 const { data: board } = await useFetch('/api/leaderboard', {
@@ -92,6 +92,7 @@ function score(g) {
           color="neutral"
           variant="ghost"
           size="xs"
+          :loading="saving"
           @click="autoFill"
         />
       </div>

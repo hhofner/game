@@ -1,19 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 // The current user's selection for the current matchday.
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+  const userId = await getUserId(event)
+  if (!userId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
 
-  const db = await serverSupabaseClient(event) as unknown as SupabaseClient
+  // Service client scoped to this user's id (RLS auth context isn't reliable
+  // on server routes with the new JWT keys).
+  const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
   const md = await currentMatchday(db)
-  if (!md) return { matchday: null, players: [] }
+  if (!md) return { matchday: null, players: [], autoFilled: false }
 
   const { data: sel } = await db
     .from('selections')
     .select('id, auto_filled, selection_players(player_id)')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('matchday_id', md.id)
     .maybeSingle()
 

@@ -49,12 +49,23 @@ export function useSelection() {
     return s.slice(0, MAX_SELECTION)
   })
 
+  const toast = useToast()
+  const saving = useState('selection-saving', () => false)
+
   function setPlayers(next: Player[]) {
     if (data.value) data.value.players = next
   }
 
   async function persist() {
-    await $fetch('/api/selection', { method: 'PUT', body: { playerIds: players.value.map(p => p.id) } })
+    saving.value = true
+    try {
+      await $fetch('/api/selection', { method: 'PUT', body: { playerIds: players.value.map(p => p.id) } })
+    } catch {
+      toast.add({ title: 'Could not save your selection', color: 'error', icon: 'i-lucide-triangle-alert' })
+      await refresh() // revert optimistic change to server truth
+    } finally {
+      saving.value = false
+    }
   }
 
   async function select(player: Player) {
@@ -88,10 +99,11 @@ export function useSelection() {
     }
     setPlayers(next)
     await persist()
+    toast.add({ title: 'Filled your empty slots', icon: 'i-lucide-dice-5' })
   }
 
   return {
     selection, selected, matchday, count, isFull, isSelected,
-    select, removeAt, removeById, replaceById, autoFill, pending, refresh
+    select, removeAt, removeById, replaceById, autoFill, pending, saving, refresh
   }
 }

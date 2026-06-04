@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 // Record that the user has seen results up to a matchday number.
 export default defineEventHandler(async (event) => {
@@ -8,9 +8,8 @@ export default defineEventHandler(async (event) => {
 
   let userId = (cfg.public.appMode !== 'production' && getQuery(event).userId as string) || ''
   if (!userId) {
-    const user = await serverSupabaseUser(event)
-    if (!user) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
-    userId = user.id
+    userId = (await getUserId(event)) ?? ''
+    if (!userId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
 
   const body = await readBody<{ matchday?: number }>(event)
