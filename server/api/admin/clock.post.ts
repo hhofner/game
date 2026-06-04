@@ -8,9 +8,7 @@ interface MdRow { id: string, number: number, label: string, starts_at: string |
 //   { action: 'advance' }  -> play the current matchday: lock + auto-fill + score, advance time
 //   { action: 'set', iso } -> set the clock explicitly
 export default defineEventHandler(async (event) => {
-  if (useRuntimeConfig(event).public.appMode === 'production') {
-    throw createError({ statusCode: 404 })
-  }
+  assertTesting(event)
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
   const body = await readBody<{ action?: string, iso?: string }>(event)
 

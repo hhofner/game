@@ -3,9 +3,7 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 
 // Recompute scores for all matchdays. Testing-mode only.
 export default defineEventHandler(async (event) => {
-  if (useRuntimeConfig(event).public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Disabled in production' })
-  }
+  assertAdmin(event)
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
   return computeScores(db)
 })

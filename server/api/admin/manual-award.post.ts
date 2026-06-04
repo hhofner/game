@@ -4,9 +4,7 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 // Adjudicate a manual challenge: mark whether a player achieved it.
 // Testing-mode only. POST { matchday: number, playerId: string, achieved?: boolean }
 export default defineEventHandler(async (event) => {
-  if (useRuntimeConfig(event).public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Disabled in production' })
-  }
+  assertAdmin(event)
   const body = await readBody<{ matchday?: number, playerId?: string, achieved?: boolean }>(event)
   if (!body?.matchday || !body?.playerId) {
     throw createError({ statusCode: 400, statusMessage: 'matchday and playerId required' })

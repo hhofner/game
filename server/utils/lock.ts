@@ -28,7 +28,8 @@ export async function lockMatchdayById(db: SupabaseClient, matchdayId: string) {
 
   if (inserts.length) await db.from('selection_players').insert(inserts)
   if (autoFilledSelIds.length) await db.from('selections').update({ auto_filled: true }).in('id', autoFilledSelIds)
-  await db.from('selections').update({ locked_at: new Date().toISOString() }).eq('matchday_id', matchdayId)
+  // Only stamp not-yet-locked selections, so re-running each cron tick is cheap.
+  await db.from('selections').update({ locked_at: new Date().toISOString() }).eq('matchday_id', matchdayId).is('locked_at', null)
 
   return { locked: sels?.length ?? 0, autoFilled: autoFilledSelIds.length, picksAdded: inserts.length }
 }

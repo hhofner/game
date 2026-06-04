@@ -4,9 +4,7 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 // Lock a matchday + auto-fill empty slots. Testing-mode only.
 // POST /api/admin/lock-matchday?matchday=N
 export default defineEventHandler(async (event) => {
-  if (useRuntimeConfig(event).public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Disabled in production' })
-  }
+  assertAdmin(event)
   const n = Number(getQuery(event).matchday)
   if (!n) throw createError({ statusCode: 400, statusMessage: 'matchday number required' })
 

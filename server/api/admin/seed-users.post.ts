@@ -22,10 +22,7 @@ function pick3(ids: string[]) {
 // Seed bot accounts with random selections for every matchday, so scoring +
 // leaderboard are demonstrable. Testing-mode only. Idempotent.
 export default defineEventHandler(async (event) => {
-  const cfg = useRuntimeConfig(event)
-  if (cfg.public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Seeding disabled in production' })
-  }
+  assertTesting(event)
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
 
   // Existing users by email

@@ -16,10 +16,7 @@ const POOL = [
 ]
 
 export default defineEventHandler(async (event) => {
-  const cfg = useRuntimeConfig(event)
-  if (cfg.public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Seeding disabled in production' })
-  }
+  assertAdmin(event)
   const reassign = getQuery(event).reassign === '1'
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
 

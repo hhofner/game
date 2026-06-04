@@ -17,9 +17,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    // Server-only secret (set via NUXT_API_FOOTBALL_KEY). Supabase keys are
-    // handled by @nuxtjs/supabase.
+    // Server-only secrets. Supabase keys are handled by @nuxtjs/supabase.
     apiFootballKey: '',
+    adminKey: '', // NUXT_ADMIN_KEY — guards admin/cron routes in production
     public: {
       // 'testing' | 'production' (override via NUXT_PUBLIC_APP_MODE).
       // Testing exposes admin/sandbox triggers and the beta banner.
