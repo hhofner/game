@@ -7,8 +7,6 @@ const props = defineProps({
   next: { type: Array, default: () => [] }
 })
 
-const { avatar: profileAvatar } = useProfile()
-
 const phase = ref('intro') // intro | shake | moving | up | down
 const rows = ref([])
 const confetti = ref([])
@@ -76,7 +74,7 @@ function start() {
 }
 
 function rowSrc(row) {
-  return (row.isYou ? profileAvatar.value : row.avatar) || undefined
+  return row.avatar || undefined
 }
 
 function rowClass(row) {

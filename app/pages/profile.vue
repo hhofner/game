@@ -3,7 +3,7 @@ definePageMeta({
   title: 'Profile'
 })
 
-const { avatar } = useProfile()
+const { avatar, loadAvatar, setAvatar } = useProfile()
 const { username, logout } = useAuth()
 
 // Testing-only simulated clock control
@@ -11,6 +11,7 @@ const { isTesting } = useAppMode()
 const { data: clock, refresh: refreshClock } = useFetch('/api/admin/clock', { default: () => null, immediate: false })
 const clockBusy = ref(false)
 onMounted(() => {
+  loadAvatar()
   if (isTesting.value) refreshClock()
 })
 async function clockAction(action) {
@@ -41,7 +42,10 @@ function fmtClock(iso) {
         {{ username }}
       </h2>
 
-      <CoachPicker v-model="avatar" />
+      <CoachPicker
+        :model-value="avatar"
+        @update:model-value="setAvatar"
+      />
     </div>
 
     <!-- Rules of the game -->
