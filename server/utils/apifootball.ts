@@ -9,22 +9,22 @@ export function wcSeason() {
   return useRuntimeConfig().public.appMode === 'production' ? 2026 : 2022
 }
 
-// Map an API-Football `league.round` string to a matchday slot.
-// Ordered: more specific rounds first so "Final" doesn't swallow "Quarter-finals".
-const ROUND_MAP: { re: RegExp, number: number, label: string, type: 'group' | 'knockout' }[] = [
-  { re: /group stage - 1/i, number: 1, label: 'Matchday 1', type: 'group' },
-  { re: /group stage - 2/i, number: 2, label: 'Matchday 2', type: 'group' },
-  { re: /group stage - 3/i, number: 3, label: 'Matchday 3', type: 'group' },
-  { re: /round of 32/i, number: 4, label: 'Round of 32', type: 'knockout' },
-  { re: /round of 16/i, number: 5, label: 'Round of 16', type: 'knockout' },
-  { re: /quarter/i, number: 6, label: 'Quarter-finals', type: 'knockout' },
-  { re: /semi/i, number: 7, label: 'Semi-finals', type: 'knockout' },
-  { re: /3rd place|third place/i, number: 8, label: 'Third-place play-off', type: 'knockout' },
-  { re: /final/i, number: 9, label: 'Final', type: 'knockout' }
+// Classify an API-Football `league.round` into a matchday phase.
+//   early: group stage / round of 32 / round of 16  -> matchday per date
+//   late:  quarter-finals / semi-finals / final      -> matchday per round
+// Checked specific-first so "Final" doesn't swallow "Quarter-finals".
+const LATE_ROUNDS: { re: RegExp, label: string }[] = [
+  { re: /quarter/i, label: 'Quarter-finals' },
+  { re: /semi/i, label: 'Semi-finals' },
+  { re: /3rd place|third place/i, label: 'Third-place play-off' },
+  { re: /final/i, label: 'Final' }
 ]
 
-export function mapRound(round: string) {
-  return ROUND_MAP.find(r => r.re.test(round)) ?? null
+export function classifyRound(round: string): { phase: 'early' | 'late', roundLabel: string | null } {
+  for (const r of LATE_ROUNDS) {
+    if (r.re.test(round)) return { phase: 'late', roundLabel: r.label }
+  }
+  return { phase: 'early', roundLabel: null }
 }
 
 export function apiFootball() {
