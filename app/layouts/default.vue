@@ -1,6 +1,24 @@
 <script setup>
 const route = useRoute()
 const pageTitle = computed(() => route.meta.title || 'Game')
+
+// Show last matchday's results once, when the user returns after it finished.
+const resultsOpen = ref(false)
+const resultsPrev = ref([])
+const resultsNext = ref([])
+onMounted(async () => {
+  try {
+    const r = await $fetch('/api/results/unseen')
+    if (r && r.matchday) {
+      resultsPrev.value = r.previous
+      resultsNext.value = r.next
+      resultsOpen.value = true
+      await $fetch('/api/results/seen', { method: 'POST', body: { matchday: r.matchday } })
+    }
+  } catch {
+    // not logged in / nothing to show
+  }
+})
 </script>
 
 <template>
@@ -24,6 +42,13 @@ const pageTitle = computed(() => route.meta.title || 'Game')
 
       <!-- Glass bottom navigation -->
       <BottomNav />
+
+      <!-- Returning-user results animation -->
+      <MatchdayResultsModal
+        v-model:open="resultsOpen"
+        :previous="resultsPrev"
+        :next="resultsNext"
+      />
     </div>
   </div>
 </template>
