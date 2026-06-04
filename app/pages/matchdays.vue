@@ -87,6 +87,16 @@ function score(g) {
                 </ul>
               </template>
               <p
+                v-else-if="md.challengeHidden"
+                class="flex items-center gap-1.5 text-sm text-dimmed"
+              >
+                <UIcon
+                  name="i-lucide-lock"
+                  class="size-3.5"
+                />
+                Revealed 2 matchdays before.
+              </p>
+              <p
                 v-else
                 class="text-sm text-dimmed"
               >

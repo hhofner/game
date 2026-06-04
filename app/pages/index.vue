@@ -54,7 +54,31 @@ function score(g) {
           <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
             Challenge Details
           </h4>
-          <div class="rounded-lg border border-dashed border-default">
+          <div
+            v-if="current.challenge"
+            class="rounded-lg border border-default bg-elevated/40 p-3"
+          >
+            <p class="text-sm font-medium">
+              {{ current.challenge.title }}
+            </p>
+            <ul class="mt-1.5 flex flex-col gap-1">
+              <li
+                v-for="c in current.challenge.criteria"
+                :key="c"
+                class="flex items-start gap-2 text-xs text-muted"
+              >
+                <UIcon
+                  name="i-lucide-target"
+                  class="mt-0.5 size-3.5 shrink-0"
+                />
+                {{ c }}
+              </li>
+            </ul>
+          </div>
+          <div
+            v-else
+            class="rounded-lg border border-dashed border-default"
+          >
             <EmptyState
               icon="i-lucide-target"
               text="No challenge details yet"

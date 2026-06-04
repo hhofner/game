@@ -33,12 +33,14 @@ export default defineEventHandler(async (event) => {
     cumulativeStandings(db, latest - 1),
     cumulativeStandings(db, latest)
   ])
-  const inPrev = prev.standings.some(s => s.userId === userId)
-  const inNext = next.standings.some(s => s.userId === userId)
-  if (!inPrev || !inNext) return null
+  const prevRank = prev.standings.find(s => s.userId === userId)?.rank
+  const nextRank = next.standings.find(s => s.userId === userId)?.rank
+  // Only animate when the user actually moved up or down.
+  if (prevRank == null || nextRank == null || prevRank === nextRank) return null
 
   return {
     matchday: latest,
+    direction: nextRank < prevRank ? 'up' : 'down',
     previous: prev.standings.map(s => toModalRow(s, userId)),
     next: next.standings.map(s => toModalRow(s, userId))
   }

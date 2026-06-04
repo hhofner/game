@@ -33,15 +33,21 @@ export default defineEventHandler(async (event) => {
     .order('number')
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
+  // Challenges are revealed only from 2 matchdays before (i.e. number <= current + 2).
+  const current = await currentMatchday(db)
+  const revealThrough = (current?.number ?? 0) + 2
+
   return (data as MatchdayRow[]).map((md) => {
     const ch = one(md.challenge)
+    const revealed = md.number <= revealThrough
     return {
       number: md.number,
       label: md.label,
       type: md.type,
       status: md.status,
       startsAt: md.starts_at,
-      challenge: ch ? { title: ch.title, criteria: ch.criteria ?? [] } : null,
+      challengeHidden: !revealed && !!ch,
+      challenge: (revealed && ch) ? { title: ch.title, criteria: ch.criteria ?? [] } : null,
       games: [...md.matches]
         .sort((a, b) => (a.kickoff_at ?? '').localeCompare(b.kickoff_at ?? ''))
         .map((m) => {
