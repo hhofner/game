@@ -4,6 +4,7 @@ definePageMeta({
 })
 
 const { data: matchdays, pending } = await useFetch('/api/matchdays')
+const { data: mine } = await useFetch('/api/my-matchdays', { default: () => ({}) })
 
 function score(g) {
   return g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : 'VS'
@@ -90,6 +91,46 @@ function score(g) {
                 class="text-sm text-dimmed"
               >
                 Coming soon.
+              </p>
+            </div>
+
+            <!-- Your players -->
+            <div v-if="mine[md.number]">
+              <p class="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted">
+                <span>Your players</span>
+                <span
+                  v-if="mine[md.number].total != null"
+                  class="text-primary"
+                >+{{ mine[md.number].total }} pts</span>
+              </p>
+              <div class="flex flex-col gap-1.5">
+                <div
+                  v-for="(p, pi) in mine[md.number].players"
+                  :key="pi"
+                  class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 p-2"
+                >
+                  <UAvatar
+                    :src="p.photo || undefined"
+                    :alt="p.name"
+                    icon="i-lucide-user"
+                    size="2xs"
+                  />
+                  <span class="flex-1 truncate text-sm font-medium">{{ p.name }}</span>
+                  <span
+                    v-if="p.points != null"
+                    class="text-sm font-bold tabular-nums text-primary"
+                  >+{{ p.points }}</span>
+                  <span
+                    v-else
+                    class="text-xs text-dimmed"
+                  >pending</span>
+                </div>
+              </div>
+              <p
+                v-if="mine[md.number].autoFilled"
+                class="mt-1 text-[0.7rem] text-dimmed"
+              >
+                Some slots were auto-filled at kickoff.
               </p>
             </div>
 
