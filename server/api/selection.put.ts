@@ -10,6 +10,13 @@ export default defineEventHandler(async (event) => {
   const md = await currentMatchday(db)
   if (!md) throw createError({ statusCode: 400, statusMessage: 'No active matchday' })
 
+  // Write-time lock: once the matchday has kicked off, picks are frozen.
+  // (Lets a once-a-day cron be enough — no kickoff-timed job needed.)
+  const now = await getNow(db)
+  if (md.starts_at && md.starts_at <= now) {
+    throw createError({ statusCode: 423, statusMessage: 'Selections are locked for this matchday' })
+  }
+
   const body = await readBody<{ playerIds?: string[] }>(event)
   const playerIds = Array.isArray(body?.playerIds) ? body.playerIds.slice(0, 3) : []
 

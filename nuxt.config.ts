@@ -30,6 +30,11 @@ export default defineNuxtConfig({
   // SSR (no prerender): dynamic data is served via Nitro server routes
   compatibilityDate: '2025-01-15',
 
+  nitro: {
+    // Give the cron tick room to ingest a batch within the Vercel Hobby limit.
+    vercel: { functions: { maxDuration: 60 } }
+  },
+
   eslint: {
     config: {
       stylistic: {

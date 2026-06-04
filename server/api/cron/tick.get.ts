@@ -1,18 +1,26 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serverSupabaseServiceRole } from '#supabase/server'
 
-// Production cron tick — call on a schedule (host cron) with the admin key.
-// Refreshes fixtures, ingests a batch of finished stats, locks matchdays that
-// have kicked off, and recomputes scores. ?limit=N stats per tick.
+// Scheduled scoring tick. Vercel Cron calls this with GET +
+// `Authorization: Bearer $CRON_SECRET`. In production it requires that (or our
+// admin key); in testing it's open. Refresh fixtures -> ingest finished stats
+// -> lock kicked-off matchdays -> recompute scores. ?limit=N stats per tick.
 export default defineEventHandler(async (event) => {
-  assertAdmin(event)
+  const cfg = useRuntimeConfig(event)
+  if (cfg.public.appMode === 'production') {
+    const auth = getHeader(event, 'authorization') || ''
+    const cronSecret = process.env.CRON_SECRET
+    const adminKey = getHeader(event, 'x-admin-key') || (getQuery(event).key as string | undefined)
+    const ok = (cronSecret && auth === `Bearer ${cronSecret}`) || (cfg.adminKey && adminKey === cfg.adminKey)
+    if (!ok) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
   const limit = Math.max(1, Math.min(40, Number(getQuery(event).limit) || 8))
 
   const structure = await ingestStructure(db)
   const stats = await ingestStats(db, limit)
 
-  // Lock matchdays that have kicked off (real time in production)
   const now = await getNow(db)
   const { data: mds } = await db.from('matchdays').select('id, starts_at')
   let lockedMatchdays = 0
