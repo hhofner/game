@@ -3,23 +3,32 @@ definePageMeta({
   title: 'Leaderboard'
 })
 
-const matchday = ref(totalMatchdays)
-const { avatar: profileAvatar } = useProfile()
+const through = ref(999) // server clamps to the latest scored matchday
+const { data, pending } = await useFetch('/api/leaderboard', {
+  query: { through },
+  default: () => ({ through: 0, maxMatchday: 0, standings: [] })
+})
+
+const user = useSupabaseUser()
 const { isTesting } = useAppMode()
 
 const columns = [
   { accessorKey: 'rank', header: '#' },
-  { accessorKey: 'name', header: 'Player' },
+  { accessorKey: 'username', header: 'Player' },
   { accessorKey: 'points', header: 'Points' }
 ]
 
-const rows = computed(() => standingsAt(matchday.value))
+function prev() {
+  through.value = Math.max(1, data.value.through - 1)
+}
+function next() {
+  through.value = Math.min(data.value.maxMatchday, data.value.through + 1)
+}
 
 // --- Results animation (test triggers) ---
 const resultOpen = ref(false)
 const resultPrev = ref([])
 const resultNext = ref([])
-
 function withYouAt(base, rank) {
   const you = base.find(p => p.isYou)
   const others = base.filter(p => !p.isYou)
@@ -27,7 +36,6 @@ function withYouAt(base, rank) {
   arr.splice(rank - 1, 0, you)
   return arr.map((p, i) => ({ ...p, rank: i + 1 }))
 }
-
 function testResults(dir) {
   const base = standingsAt(totalMatchdays)
   resultPrev.value = withYouAt(base, dir === 'up' ? 5 : 2)
@@ -44,23 +52,24 @@ function testResults(dir) {
         icon="i-lucide-chevron-left"
         color="neutral"
         variant="ghost"
-        :disabled="matchday <= 1"
+        :disabled="data.through <= 1"
         aria-label="Previous matchday"
-        @click="matchday--"
+        @click="prev"
       />
-      <span class="text-sm font-semibold">Matchday {{ matchday }}</span>
+      <span class="text-sm font-semibold">Matchday {{ data.through }}</span>
       <UButton
         icon="i-lucide-chevron-right"
         color="neutral"
         variant="ghost"
-        :disabled="matchday >= totalMatchdays"
+        :disabled="data.through >= data.maxMatchday"
         aria-label="Next matchday"
-        @click="matchday++"
+        @click="next"
       />
     </div>
 
     <UTable
-      :data="rows"
+      :loading="pending"
+      :data="data.standings"
       :columns="columns"
       :meta="{ class: { tr: row => rankRowClass(row.original.rank) } }"
     >
@@ -71,15 +80,15 @@ function testResults(dir) {
         >{{ row.original.rank }}</span>
       </template>
 
-      <template #name-cell="{ row }">
+      <template #username-cell="{ row }">
         <div class="flex items-center gap-2">
           <UAvatar
-            :src="(row.original.isYou ? profileAvatar : row.original.avatar) || undefined"
-            :alt="row.original.name"
+            :src="row.original.avatar || undefined"
+            :alt="row.original.username"
             icon="i-lucide-user"
             size="xs"
           />
-          <span :class="{ 'font-semibold': row.original.isYou }">{{ row.original.name }}</span>
+          <span :class="{ 'font-semibold': row.original.userId === user?.id }">{{ row.original.username }}</span>
         </div>
       </template>
     </UTable>
