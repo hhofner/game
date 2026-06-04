@@ -15,6 +15,7 @@ interface MatchdayRow {
   label: string
   type: string
   status: string
+  starts_at: string | null
   matches: MatchRow[]
 }
 
@@ -26,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await db
     .from('matchdays')
-    .select('number, label, type, status, matches(status, home_score, away_score, kickoff_at, home:home_team_id(name, logo_url), away:away_team_id(name, logo_url))')
+    .select('number, label, type, status, starts_at, matches(status, home_score, away_score, kickoff_at, home:home_team_id(name, logo_url), away:away_team_id(name, logo_url))')
     .order('number')
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
@@ -35,6 +36,7 @@ export default defineEventHandler(async (event) => {
     label: md.label,
     type: md.type,
     status: md.status,
+    startsAt: md.starts_at,
     games: [...md.matches]
       .sort((a, b) => (a.kickoff_at ?? '').localeCompare(b.kickoff_at ?? ''))
       .map((m) => {

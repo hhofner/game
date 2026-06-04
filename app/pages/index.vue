@@ -3,21 +3,26 @@ definePageMeta({
   title: 'Home'
 })
 
-const matches = [
-  { home: { name: 'France', flag: 'fr' }, away: { name: 'Germany', flag: 'de' } },
-  { home: { name: 'Brazil', flag: 'br' }, away: { name: 'Argentina', flag: 'ar' } },
-  { home: { name: 'Spain', flag: 'es' }, away: { name: 'Portugal', flag: 'pt' } }
-]
-
-const upcomingMatches = [
-  { home: { name: 'England', flag: 'gb-eng' }, away: { name: 'Italy', flag: 'it' } },
-  { home: { name: 'Netherlands', flag: 'nl' }, away: { name: 'Belgium', flag: 'be' } },
-  { home: { name: 'Croatia', flag: 'hr' }, away: { name: 'Japan', flag: 'jp' } }
-]
-
-const topThree = standingsAt(totalMatchdays).slice(0, 3)
-const { avatar: profileAvatar } = useProfile()
 const { selection, removeAt, isFull, autoFill } = useSelection()
+
+const { data: matchdays } = await useFetch('/api/matchdays', { default: () => [] })
+const { data: board } = await useFetch('/api/leaderboard', {
+  default: () => ({ standings: [] })
+})
+
+// Current matchday = earliest not-yet-started, else the earliest one
+const now = new Date().toISOString()
+const currentIndex = computed(() => {
+  const i = matchdays.value.findIndex(m => m.startsAt && m.startsAt > now)
+  return i === -1 ? 0 : i
+})
+const current = computed(() => matchdays.value[currentIndex.value] ?? null)
+const upcoming = computed(() => matchdays.value[currentIndex.value + 1] ?? null)
+const topThree = computed(() => board.value.standings.slice(0, 3))
+
+function score(g) {
+  return g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : 'VS'
+}
 </script>
 
 <template>
@@ -27,16 +32,20 @@ const { selection, removeAt, isFull, autoFill } = useSelection()
 
     <!-- Current Matchday -->
     <SectionCard
-      title="Current Matchday"
+      :title="current ? `Current Matchday · ${current.label}` : 'Current Matchday'"
       icon="i-lucide-calendar-clock"
     >
-      <div class="flex flex-col gap-4">
+      <div
+        v-if="current"
+        class="flex flex-col gap-4"
+      >
         <div class="flex flex-col gap-2">
           <MatchCard
-            v-for="match in matches"
-            :key="`${match.home.flag}-${match.away.flag}`"
-            :home="match.home"
-            :away="match.away"
+            v-for="(g, i) in current.games"
+            :key="i"
+            :home="g.home"
+            :away="g.away"
+            :middle="score(g)"
           />
         </div>
 
@@ -92,11 +101,15 @@ const { selection, removeAt, isFull, autoFill } = useSelection()
     <SectionCard
       title="Leaderboard"
       icon="i-lucide-trophy"
+      empty-text="No standings yet"
     >
-      <div class="flex flex-col gap-2">
+      <div
+        v-if="topThree.length"
+        class="flex flex-col gap-2"
+      >
         <div
           v-for="player in topThree"
-          :key="player.name"
+          :key="player.userId"
           class="flex items-center gap-3 rounded-lg border border-default p-2.5"
           :class="rankRowClass(player.rank) || 'bg-elevated/40'"
         >
@@ -107,12 +120,12 @@ const { selection, removeAt, isFull, autoFill } = useSelection()
             {{ player.rank }}
           </span>
           <UAvatar
-            :src="(player.isYou ? profileAvatar : player.avatar) || undefined"
-            :alt="player.name"
+            :src="player.avatar || undefined"
+            :alt="player.username"
             icon="i-lucide-user"
             size="2xs"
           />
-          <span class="flex-1 truncate text-sm font-medium">{{ player.name }}</span>
+          <span class="flex-1 truncate text-sm font-medium">{{ player.username }}</span>
           <span class="text-sm font-semibold tabular-nums">{{ player.points }}</span>
         </div>
       </div>
@@ -120,15 +133,17 @@ const { selection, removeAt, isFull, autoFill } = useSelection()
 
     <!-- Upcoming Matchday -->
     <SectionCard
-      title="Upcoming Matchday"
+      v-if="upcoming"
+      :title="`Upcoming Matchday · ${upcoming.label}`"
       icon="i-lucide-calendar-days"
     >
       <div class="flex flex-col gap-2">
         <MatchCard
-          v-for="match in upcomingMatches"
-          :key="`${match.home.flag}-${match.away.flag}`"
-          :home="match.home"
-          :away="match.away"
+          v-for="(g, i) in upcoming.games"
+          :key="i"
+          :home="g.home"
+          :away="g.away"
+          middle="VS"
         />
       </div>
     </SectionCard>
