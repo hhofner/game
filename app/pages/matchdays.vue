@@ -62,12 +62,33 @@ function score(g) {
 
         <template #content>
           <div class="flex flex-col gap-4 p-3">
-            <!-- Challenge (placeholder until the challenge pool is authored) -->
+            <!-- Challenge -->
             <div>
               <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
                 Challenge
               </p>
-              <p class="text-sm text-dimmed">
+              <template v-if="md.challenge">
+                <p class="text-sm font-medium">
+                  {{ md.challenge.title }}
+                </p>
+                <ul class="mt-1.5 flex flex-col gap-1">
+                  <li
+                    v-for="c in md.challenge.criteria"
+                    :key="c"
+                    class="flex items-start gap-2 text-xs text-muted"
+                  >
+                    <UIcon
+                      name="i-lucide-target"
+                      class="mt-0.5 size-3.5 shrink-0"
+                    />
+                    {{ c }}
+                  </li>
+                </ul>
+              </template>
+              <p
+                v-else
+                class="text-sm text-dimmed"
+              >
                 Coming soon.
               </p>
             </div>
