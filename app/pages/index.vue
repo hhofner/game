@@ -17,7 +17,7 @@ const upcomingMatches = [
 
 const topThree = standingsAt(totalMatchdays).slice(0, 3)
 const { avatar: profileAvatar } = useProfile()
-const { selection, removeAt } = useSelection()
+const { selection, removeAt, isFull, autoFill } = useSelection()
 </script>
 
 <template>
@@ -67,6 +67,23 @@ const { selection, removeAt } = useSelection()
           :key="i"
           :player="player"
           @remove="removeAt(i)"
+        />
+      </div>
+
+      <div
+        v-if="!isFull"
+        class="mt-3 flex items-center justify-between gap-2"
+      >
+        <p class="text-xs text-muted">
+          Empty slots are filled with random players at kickoff.
+        </p>
+        <UButton
+          label="Auto-pick"
+          icon="i-lucide-dice-5"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          @click="autoFill"
         />
       </div>
     </SectionCard>

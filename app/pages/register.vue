@@ -12,8 +12,9 @@ const email = ref('')
 const password = ref('')
 const invite = ref('')
 const error = ref('')
+const loading = ref(false)
 
-function onSubmit() {
+async function onSubmit() {
   if (!username.value || !email.value || !password.value) {
     error.value = 'Please fill in all fields.'
     return
@@ -23,8 +24,14 @@ function onSubmit() {
     return
   }
   error.value = ''
-  register(username.value)
-  navigateTo('/')
+  loading.value = true
+  try {
+    await register(email.value, password.value, username.value)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not create account.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -104,6 +111,7 @@ function onSubmit() {
         label="Create account"
         size="lg"
         block
+        :loading="loading"
       />
     </form>
 

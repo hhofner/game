@@ -5,18 +5,25 @@ definePageMeta({
 
 const { login } = useAuth()
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
 const error = ref('')
+const loading = ref(false)
 
-function onSubmit() {
-  if (!username.value || !password.value) {
-    error.value = 'Please enter your username and password.'
+async function onSubmit() {
+  if (!email.value || !password.value) {
+    error.value = 'Please enter your email and password.'
     return
   }
   error.value = ''
-  login(username.value)
-  navigateTo('/')
+  loading.value = true
+  try {
+    await login(email.value, password.value)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not log in.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -39,11 +46,12 @@ function onSubmit() {
       class="flex flex-col gap-4"
       @submit.prevent="onSubmit"
     >
-      <UFormField label="Username">
+      <UFormField label="Email">
         <UInput
-          v-model="username"
-          icon="i-lucide-user"
-          placeholder="Your username"
+          v-model="email"
+          type="email"
+          icon="i-lucide-mail"
+          placeholder="you@example.com"
           size="lg"
           class="w-full"
         />
@@ -72,6 +80,7 @@ function onSubmit() {
         label="Log in"
         size="lg"
         block
+        :loading="loading"
       />
     </form>
 

@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
-    '@nuxt/ui'
+    '@nuxt/ui',
+    '@nuxtjs/supabase'
   ],
 
   devtools: {
@@ -15,16 +16,18 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  routeRules: {
-    '/': { prerender: true },
-    '/matchdays': { prerender: true },
-    '/leaderboard': { prerender: true },
-    '/players': { prerender: true },
-    '/profile': { prerender: true },
-    '/login': { prerender: true },
-    '/register': { prerender: true }
+  runtimeConfig: {
+    // Server-only secret (set via NUXT_API_FOOTBALL_KEY). Supabase keys are
+    // handled by @nuxtjs/supabase.
+    apiFootballKey: '',
+    public: {
+      // 'testing' | 'production' (override via NUXT_PUBLIC_APP_MODE).
+      // Testing exposes admin/sandbox triggers and the beta banner.
+      appMode: 'testing'
+    }
   },
 
+  // SSR (no prerender): dynamic data is served via Nitro server routes
   compatibilityDate: '2025-01-15',
 
   eslint: {
@@ -34,5 +37,11 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  supabase: {
+    // Reads SUPABASE_URL / SUPABASE_KEY / NUXT_SUPABASE_SECRET_KEY from env.
+    // We run our own auth middleware (invite gate + auth-page allowlist).
+    redirect: false
   }
 })

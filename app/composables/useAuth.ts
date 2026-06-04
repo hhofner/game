@@ -1,24 +1,35 @@
-interface AuthUser {
-  name: string
-}
-
-// Mock auth for the prototype (persisted in a cookie). No real backend.
+// Auth wrapper around Supabase. Email + password, with an invite gate on register.
 export function useAuth() {
-  const user = useCookie<AuthUser | null>('game_user', { default: () => null })
+  const supabase = useSupabaseClient()
+  const user = useSupabaseUser()
+
   const loggedIn = computed(() => !!user.value)
+  const username = computed(() =>
+    (user.value?.user_metadata?.username as string | undefined)
+    || user.value?.email?.split('@')[0]
+    || 'Player'
+  )
 
-  function login(name: string) {
-    user.value = { name }
+  async function login(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    await navigateTo('/')
   }
 
-  function register(name: string) {
-    user.value = { name }
+  async function register(email: string, password: string, name: string) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { username: name } }
+    })
+    if (error) throw error
+    await navigateTo('/')
   }
 
-  function logout() {
-    user.value = null
-    navigateTo('/login')
+  async function logout() {
+    await supabase.auth.signOut()
+    await navigateTo('/login')
   }
 
-  return { user, loggedIn, login, register, logout }
+  return { user, loggedIn, username, login, register, logout }
 }

@@ -34,5 +34,17 @@ export function useSelection() {
     navigateTo('/players')
   }
 
-  return { selection, selected, count, isFull, isSelected, select, removeAt, removeById, replaceById }
+  // Fill any empty slots with random players (mirrors the kickoff auto-fill rule)
+  function autoFill() {
+    const { players } = usePlayers()
+    const taken = new Set(selection.value.filter(Boolean).map(p => p!.id))
+    const pool = players.filter(p => !taken.has(p.id))
+    for (let i = 0; i < selection.value.length; i++) {
+      if (selection.value[i] || !pool.length) continue
+      const idx = Math.floor(Math.random() * pool.length)
+      selection.value[i] = pool.splice(idx, 1)[0] ?? null
+    }
+  }
+
+  return { selection, selected, count, isFull, isSelected, select, removeAt, removeById, replaceById, autoFill }
 }

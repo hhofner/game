@@ -1,6 +1,13 @@
+<script setup>
+const { isTesting } = useAppMode()
+</script>
+
 <template>
-  <!-- TODO: remove for production -->
-  <div class="flex shrink-0 items-center justify-center gap-1.5 bg-yellow-400 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-yellow-950">
+  <!-- Only shown in testing mode; disappears automatically in production -->
+  <div
+    v-if="isTesting"
+    class="flex shrink-0 items-center justify-center gap-1.5 bg-yellow-400 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-yellow-950"
+  >
     <UIcon
       name="i-lucide-flask-conical"
       class="size-3.5"

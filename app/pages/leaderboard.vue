@@ -5,6 +5,7 @@ definePageMeta({
 
 const matchday = ref(totalMatchdays)
 const { avatar: profileAvatar } = useProfile()
+const { isTesting } = useAppMode()
 
 const columns = [
   { accessorKey: 'rank', header: '#' },
@@ -83,8 +84,11 @@ function testResults(dir) {
       </template>
     </UTable>
 
-    <!-- Test panel for the results animation -->
-    <div class="flex flex-col gap-2 rounded-lg border border-dashed border-default p-3">
+    <!-- Test panel for the results animation (testing mode only) -->
+    <div
+      v-if="isTesting"
+      class="flex flex-col gap-2 rounded-lg border border-dashed border-default p-3"
+    >
       <p class="text-xs font-semibold uppercase tracking-wide text-muted">
         Test results animation
       </p>

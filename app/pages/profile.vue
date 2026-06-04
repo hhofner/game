@@ -4,9 +4,7 @@ definePageMeta({
 })
 
 const { avatar } = useProfile()
-const { user, logout } = useAuth()
-
-const username = computed(() => user.value?.name || 'Player')
+const { username, logout } = useAuth()
 </script>
 
 <template>
@@ -50,6 +48,11 @@ const username = computed(() => user.value?.name || 'Player')
         <p>
           Scoring only applies to players who actually play in that matchday. If
           one of your picks doesn't feature, they won't earn you any points.
+        </p>
+        <p>
+          You can change your picks any time before the first kick-off. If you
+          haven't chosen three players by then, the empty slots are filled with
+          random players automatically.
         </p>
       </div>
     </SectionCard>
