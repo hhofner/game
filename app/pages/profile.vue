@@ -5,6 +5,26 @@ definePageMeta({
 
 const { avatar } = useProfile()
 const { username, logout } = useAuth()
+
+// Testing-only simulated clock control
+const { isTesting } = useAppMode()
+const { data: clock, refresh: refreshClock } = useFetch('/api/admin/clock', { default: () => null, immediate: false })
+const clockBusy = ref(false)
+onMounted(() => {
+  if (isTesting.value) refreshClock()
+})
+async function clockAction(action) {
+  clockBusy.value = true
+  try {
+    await $fetch('/api/admin/clock', { method: 'POST', body: { action } })
+    reloadNuxtApp() // refetch selection / leaderboard / matchdays and fire the results modal
+  } catch {
+    clockBusy.value = false
+  }
+}
+function fmtClock(iso) {
+  return iso ? new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
+}
 </script>
 
 <template>
@@ -56,6 +76,42 @@ const { username, logout } = useAuth()
         </p>
       </div>
     </SectionCard>
+
+    <!-- Simulated clock (testing only) -->
+    <div
+      v-if="isTesting"
+      class="flex flex-col gap-3 rounded-lg border border-dashed border-default p-3"
+    >
+      <div class="flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-muted">
+          Dev clock
+        </p>
+        <span class="text-xs text-muted">{{ fmtClock(clock?.now) }}</span>
+      </div>
+      <p class="text-xs text-muted">
+        Picking for: <span class="font-medium text-default">{{ clock?.current?.label || 'season over' }}</span>
+      </p>
+      <div class="grid grid-cols-2 gap-2">
+        <UButton
+          label="Reset to start"
+          icon="i-lucide-rotate-ccw"
+          color="neutral"
+          variant="soft"
+          block
+          :disabled="clockBusy"
+          @click="clockAction('reset')"
+        />
+        <UButton
+          label="Play matchday"
+          icon="i-lucide-fast-forward"
+          color="neutral"
+          variant="soft"
+          block
+          :loading="clockBusy"
+          @click="clockAction('advance')"
+        />
+      </div>
+    </div>
 
     <UButton
       label="Log out"

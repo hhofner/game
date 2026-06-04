@@ -18,6 +18,6 @@ export async function currentMatchday(db: SupabaseClient): Promise<CurrentMatchd
     .select('id, number, label, type, starts_at')
     .order('number')
   const rows = (data ?? []) as CurrentMatchday[]
-  const now = new Date().toISOString()
+  const now = await getNow(db)
   return rows.find(m => m.starts_at && m.starts_at > now) ?? rows[0] ?? null
 }

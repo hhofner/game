@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serverSupabaseServiceRole } from '#supabase/server'
 
-// Recompute scores for all matchdays. Testing-mode only.
+// Current simulated clock + which matchday is being picked for. Testing only.
 export default defineEventHandler(async (event) => {
   if (useRuntimeConfig(event).public.appMode === 'production') {
-    throw createError({ statusCode: 403, statusMessage: 'Disabled in production' })
+    throw createError({ statusCode: 404 })
   }
   const db = serverSupabaseServiceRole(event) as unknown as SupabaseClient
-  return computeScores(db)
+  const now = await getNow(db)
+  const current = await currentMatchday(db)
+  return { now, current: current ? { number: current.number, label: current.label } : null }
 })
