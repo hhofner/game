@@ -19,9 +19,9 @@ function score(g) {
         class="mt-0.5 size-4 shrink-0 text-muted"
       />
       <p class="text-xs leading-relaxed text-muted">
-        Matchdays start out <span class="font-medium text-default">group based</span>.
-        After the group stage they become <span class="font-medium text-default">day based</span>,
-        one per round: round of 32, round of 16, quarter-finals, semi-finals and the final.
+        Matchdays start <span class="font-medium text-default">by date</span>, and then after the
+        round of 16 are <span class="font-medium text-default">by actual round</span>
+        (quarter-finals, semi-finals and the final).
       </p>
     </div>
 
