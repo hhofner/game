@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const cfg = useRuntimeConfig(event)
   if (cfg.public.appMode === 'production') {
     const auth = getHeader(event, 'authorization') || ''
-    const cronSecret = process.env.CRON_SECRET
+    const cronSecret = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CRON_SECRET
     const adminKey = getHeader(event, 'x-admin-key') || (getQuery(event).key as string | undefined)
     const ok = (cronSecret && auth === `Bearer ${cronSecret}`) || (cfg.adminKey && adminKey === cfg.adminKey)
     if (!ok) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })

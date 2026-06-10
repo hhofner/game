@@ -67,18 +67,19 @@ export default defineEventHandler(async (event) => {
 
     if (allMatchIds.length) {
       // Try full column list first; fall back to base columns if extended ones don't exist yet.
-      let { data: statsRows, error: statsErr } = await db
+      const statsRes = await db
         .from('player_match_stats')
         .select('player_id, match_id, minutes, goals, assists, clean_sheet, yellow, red, key_passes, shots_on_target, tackles, interceptions, saves')
         .in('match_id', allMatchIds)
         .in('player_id', allPlayerIds)
-      if (statsErr) {
+      let statsRows = statsRes.data
+      if (statsRes.error) {
         const fallback = await db
           .from('player_match_stats')
           .select('player_id, match_id, minutes, goals, assists, clean_sheet, yellow, red')
           .in('match_id', allMatchIds)
           .in('player_id', allPlayerIds)
-        statsRows = fallback.data
+        statsRows = fallback.data as typeof statsRows
       }
 
       for (const s of (statsRows ?? []) as (PlayerStat & { player_id: string, match_id: string })[]) {

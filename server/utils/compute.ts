@@ -24,16 +24,17 @@ export async function computeScores(db: SupabaseClient) {
     if (!matchIds.length) continue
 
     // Per-player aggregated stats for this matchday (fall back to base columns if migration not yet applied)
-    let { data: stats, error: statsErr } = await db
+    const statsRes = await db
       .from('player_match_stats')
       .select('player_id, minutes, goals, assists, clean_sheet, yellow, red, shots, shots_on_target, key_passes, passes, pass_accuracy, tackles, interceptions, blocks, duels_won, dribbles_completed, fouls_drawn, fouls_committed, saves, offsides, penalties_scored, penalties_missed, penalties_saved, rating')
       .in('match_id', matchIds)
-    if (statsErr) {
+    let stats = statsRes.data
+    if (statsRes.error) {
       const fallback = await db
         .from('player_match_stats')
         .select('player_id, minutes, goals, assists, clean_sheet, yellow, red')
         .in('match_id', matchIds)
-      stats = fallback.data
+      stats = fallback.data as typeof stats
     }
     const NUM_KEYS: (keyof PlayerStat)[] = [
       'goals', 'assists', 'yellow', 'red',
@@ -47,12 +48,14 @@ export async function computeScores(db: SupabaseClient) {
       const cur = statByPlayer.get(s.player_id)
       if (!cur) {
         const entry: PlayerStat = { minutes: s.minutes, clean_sheet: s.clean_sheet } as PlayerStat
-        for (const k of NUM_KEYS) (entry as Record<string, number>)[k as string] = Number(s[k]) || 0
+        const entryRec = entry as unknown as Record<string, number>
+        for (const k of NUM_KEYS) entryRec[k as string] = Number(s[k]) || 0
         statByPlayer.set(s.player_id, entry)
       } else {
         cur.minutes += s.minutes
         cur.clean_sheet = cur.clean_sheet || s.clean_sheet
-        for (const k of NUM_KEYS) (cur as Record<string, number>)[k as string] += Number(s[k]) || 0
+        const curRec = cur as unknown as Record<string, number>
+        for (const k of NUM_KEYS) curRec[k as string] = (curRec[k as string] ?? 0) + (Number(s[k]) || 0)
       }
     }
 

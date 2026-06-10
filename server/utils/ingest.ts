@@ -29,10 +29,6 @@ interface AfTeamPlayers {
   players: { player: { id: number, name: string, photo: string }, statistics: AfStat[] }[]
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
-}
-
 // Teams + date/round matchdays + matches, in one API-Football call. Idempotent.
 export async function ingestStructure(db: SupabaseClient) {
   const af = apiFootball()
