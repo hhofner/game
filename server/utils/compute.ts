@@ -14,7 +14,7 @@ export async function computeScores(db: SupabaseClient) {
   const scoreRows: { user_id: string, matchday_id: string, points: number }[] = []
   let matchdaysScored = 0
 
-  for (const md of (mds ?? []) as { id: string, challenge: { kind: string, scoring_rules: ScoringRules & { achieved?: number } } | { kind: string, scoring_rules: ScoringRules & { achieved?: number } }[] | null }[]) {
+  for (const md of (mds ?? []) as { id: string, challenge: { kind: string, scoring_rules: ScoringRules } | { kind: string, scoring_rules: ScoringRules }[] | null }[]) {
     const challenge = one(md.challenge)
     if (!challenge) continue
     const rules = challenge.scoring_rules ?? {}
@@ -23,23 +23,39 @@ export async function computeScores(db: SupabaseClient) {
     const matchIds = (matches ?? []).map(m => m.id)
     if (!matchIds.length) continue
 
-    // Per-player aggregated stats for this matchday
-    const { data: stats } = await db
+    // Per-player aggregated stats for this matchday (fall back to base columns if migration not yet applied)
+    const statsRes = await db
       .from('player_match_stats')
-      .select('player_id, minutes, goals, assists, clean_sheet, yellow, red')
+      .select('player_id, minutes, goals, assists, clean_sheet, yellow, red, shots, shots_on_target, key_passes, passes, pass_accuracy, tackles, interceptions, blocks, duels_won, dribbles_completed, fouls_drawn, fouls_committed, saves, offsides, penalties_scored, penalties_missed, penalties_saved, rating')
       .in('match_id', matchIds)
+    let stats = statsRes.data
+    if (statsRes.error) {
+      const fallback = await db
+        .from('player_match_stats')
+        .select('player_id, minutes, goals, assists, clean_sheet, yellow, red')
+        .in('match_id', matchIds)
+      stats = fallback.data as typeof stats
+    }
+    const NUM_KEYS: (keyof PlayerStat)[] = [
+      'goals', 'assists', 'yellow', 'red',
+      'shots', 'shots_on_target', 'key_passes', 'passes', 'pass_accuracy',
+      'tackles', 'interceptions', 'blocks', 'duels_won', 'dribbles_completed',
+      'fouls_drawn', 'fouls_committed', 'saves', 'offsides',
+      'penalties_scored', 'penalties_missed', 'penalties_saved', 'rating'
+    ]
     const statByPlayer = new Map<string, PlayerStat>()
     for (const s of (stats ?? []) as (PlayerStat & { player_id: string })[]) {
       const cur = statByPlayer.get(s.player_id)
       if (!cur) {
-        statByPlayer.set(s.player_id, { minutes: s.minutes, goals: s.goals, assists: s.assists, clean_sheet: s.clean_sheet, yellow: s.yellow, red: s.red })
+        const entry: PlayerStat = { minutes: s.minutes, clean_sheet: s.clean_sheet } as PlayerStat
+        const entryRec = entry as unknown as Record<string, number>
+        for (const k of NUM_KEYS) entryRec[k as string] = Number(s[k]) || 0
+        statByPlayer.set(s.player_id, entry)
       } else {
         cur.minutes += s.minutes
-        cur.goals += s.goals
-        cur.assists += s.assists
-        cur.yellow += s.yellow
-        cur.red += s.red
         cur.clean_sheet = cur.clean_sheet || s.clean_sheet
+        const curRec = cur as unknown as Record<string, number>
+        for (const k of NUM_KEYS) curRec[k as string] = (curRec[k as string] ?? 0) + (Number(s[k]) || 0)
       }
     }
 
@@ -56,15 +72,22 @@ export async function computeScores(db: SupabaseClient) {
       .eq('matchday_id', md.id)
 
     for (const sel of (selections ?? []) as { user_id: string, selection_players: { player_id: string }[] }[]) {
-      let total = 0
-      for (const sp of sel.selection_players) {
-        const pts = challenge.kind === 'manual'
-          ? (awarded.has(sp.player_id) ? (rules.achieved ?? 0) : 0)
-          : scorePlayer(rules, statByPlayer.get(sp.player_id))
-        pointRows.push({ user_id: sel.user_id, matchday_id: md.id, player_id: sp.player_id, points: pts })
-        total += pts
+      if (challenge.kind === 'manual') {
+        let total = 0
+        for (const sp of sel.selection_players) {
+          const pts = awarded.has(sp.player_id) ? (rules.achieved ?? 0) : 0
+          pointRows.push({ user_id: sel.user_id, matchday_id: md.id, player_id: sp.player_id, points: pts })
+          total += pts
+        }
+        scoreRows.push({ user_id: sel.user_id, matchday_id: md.id, points: total })
+      } else {
+        const playerStats = sel.selection_players.map(sp => statByPlayer.get(sp.player_id))
+        const total = scoreSelection(rules, playerStats)
+        for (const sp of sel.selection_players) {
+          pointRows.push({ user_id: sel.user_id, matchday_id: md.id, player_id: sp.player_id, points: 0 })
+        }
+        scoreRows.push({ user_id: sel.user_id, matchday_id: md.id, points: total })
       }
-      scoreRows.push({ user_id: sel.user_id, matchday_id: md.id, points: total })
     }
     matchdaysScored++
   }

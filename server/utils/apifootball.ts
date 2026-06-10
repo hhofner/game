@@ -20,11 +20,12 @@ const LATE_ROUNDS: { re: RegExp, label: string }[] = [
   { re: /final/i, label: 'Final' }
 ]
 
-export function classifyRound(round: string): { phase: 'early' | 'late', roundLabel: string | null } {
+export function classifyRound(round: string): { phase: 'early' | 'late', roundLabel: string } {
   for (const r of LATE_ROUNDS) {
     if (r.re.test(round)) return { phase: 'late', roundLabel: r.label }
   }
-  return { phase: 'early', roundLabel: null }
+  // Normalise API label: "Group Stage - 1" → "Group Stage 1"
+  return { phase: 'early', roundLabel: round.replace(/\s*-\s*(\d)/, ' $1') }
 }
 
 export function apiFootball() {

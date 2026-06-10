@@ -9,6 +9,22 @@ const { data: mine } = await useFetch('/api/my-matchdays', { default: () => ({})
 function score(g) {
   return g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : 'VS'
 }
+
+const STAT_LABELS = [
+  { key: 'goals', label: 'G' },
+  { key: 'assists', label: 'A' },
+  { key: 'key_passes', label: 'KP' },
+  { key: 'shots_on_target', label: 'SoT' },
+  { key: 'tackles', label: 'T' },
+  { key: 'interceptions', label: 'Int' },
+  { key: 'saves', label: 'Sv' },
+  { key: 'yellow', label: '🟨' },
+  { key: 'red', label: '🟥' }
+]
+
+function statItems(stats) {
+  return STAT_LABELS.filter(s => (stats[s.key] ?? 0) > 0).map(s => ({ label: s.label, value: stats[s.key] }))
+}
 </script>
 
 <template>
@@ -117,23 +133,39 @@ function score(g) {
                 <div
                   v-for="(p, pi) in mine[md.number].players"
                   :key="pi"
-                  class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 p-2"
+                  class="flex items-start gap-2 rounded-lg border border-default bg-elevated/40 p-2"
                 >
                   <UAvatar
                     :src="p.photo || undefined"
                     :alt="p.name"
                     icon="i-lucide-user"
                     size="2xs"
+                    class="mt-0.5 shrink-0"
                   />
-                  <span class="flex-1 truncate text-sm font-medium">{{ p.name }}</span>
-                  <span
-                    v-if="p.points != null"
-                    class="text-sm font-bold tabular-nums text-primary"
-                  >+{{ p.points }}</span>
-                  <span
-                    v-else
-                    class="text-xs text-dimmed"
-                  >pending</span>
+                  <div class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-medium">{{ p.name }}</span>
+                    <div
+                      v-if="p.stats"
+                      class="mt-1 flex flex-wrap gap-1"
+                    >
+                      <span class="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium tabular-nums text-dimmed">
+                        {{ p.stats.minutes }}'
+                      </span>
+                      <span
+                        v-for="s in statItems(p.stats)"
+                        :key="s.label"
+                        class="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium tabular-nums"
+                      >{{ s.value }} {{ s.label }}</span>
+                      <span
+                        v-if="p.stats.clean_sheet"
+                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[0.65rem] font-semibold text-primary"
+                      >CS</span>
+                    </div>
+                    <span
+                      v-else
+                      class="text-xs text-dimmed"
+                    >pending</span>
+                  </div>
                 </div>
               </div>
               <p
@@ -149,7 +181,7 @@ function score(g) {
               <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
                 Games
               </p>
-              <div class="flex flex-col gap-2">
+              <div class="flex max-h-44 flex-col gap-2 overflow-y-auto">
                 <MatchCard
                   v-for="(g, gi) in md.games"
                   :key="gi"

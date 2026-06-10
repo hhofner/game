@@ -10,7 +10,7 @@ interface MatchRow {
   home: TeamRef | TeamRef[] | null
   away: TeamRef | TeamRef[] | null
 }
-interface ChallengeRef { title: string, criteria: string[] | null }
+interface ChallengeRef { title: string, criteria: string[] | null, scoring_rules: Record<string, unknown> | null }
 interface MatchdayRow {
   number: number
   label: string
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await db
     .from('matchdays')
-    .select('number, label, type, status, starts_at, challenge:challenge_id(title, criteria), matches(status, home_score, away_score, kickoff_at, home:home_team_id(name, logo_url), away:away_team_id(name, logo_url))')
+    .select('number, label, type, status, starts_at, challenge:challenge_id(title, criteria, scoring_rules), matches(status, home_score, away_score, kickoff_at, home:home_team_id(name, logo_url), away:away_team_id(name, logo_url))')
     .order('number')
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
       status: md.status,
       startsAt: md.starts_at,
       challengeHidden: !revealed && !!ch,
-      challenge: (revealed && ch) ? { title: ch.title, criteria: ch.criteria ?? [] } : null,
+      challenge: (revealed && ch) ? { title: ch.title, criteria: ch.criteria ?? [], scoring_rules: ch.scoring_rules ?? {} } : null,
       games: [...md.matches]
         .sort((a, b) => (a.kickoff_at ?? '').localeCompare(b.kickoff_at ?? ''))
         .map((m) => {

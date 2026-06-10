@@ -12,17 +12,21 @@ interface AfFixture {
   goals: { home: number | null, away: number | null }
 }
 interface AfStat {
-  games?: { minutes?: number | null }
-  goals?: { total?: number | null, conceded?: number | null, assists?: number | null }
+  games?: { minutes?: number | null, rating?: string | null }
+  offsides?: number | null
+  shots?: { total?: number | null, on?: number | null }
+  goals?: { total?: number | null, conceded?: number | null, assists?: number | null, saves?: number | null }
+  passes?: { total?: number | null, key?: number | null, accuracy?: string | number | null }
+  tackles?: { total?: number | null, blocks?: number | null, interceptions?: number | null }
+  duels?: { total?: number | null, won?: number | null }
+  dribbles?: { attempts?: number | null, success?: number | null }
+  fouls?: { drawn?: number | null, committed?: number | null }
   cards?: { yellow?: number | null, red?: number | null }
+  penalty?: { scored?: number | null, missed?: number | null, saved?: number | null }
 }
 interface AfTeamPlayers {
   team: { id: number }
   players: { player: { id: number, name: string, photo: string }, statistics: AfStat[] }[]
-}
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 }
 
 // Teams + date/round matchdays + matches, in one API-Football call. Idempotent.
@@ -47,11 +51,11 @@ export async function ingestStructure(db: SupabaseClient) {
   for (const fx of fixtures) {
     const { phase, roundLabel } = classifyRound(fx.league?.round ?? '')
     const date = fx.fixture.date
-    const key = phase === 'early' ? `d:${date.slice(0, 10)}` : `r:${roundLabel}`
+    const key = `r:${roundLabel}`
     fixtureKey.set(fx.fixture.id, key)
     const acc = mdByKey.get(key)
     if (!acc) {
-      mdByKey.set(key, { natural_key: key, label: phase === 'early' ? fmtDate(date) : roundLabel!, type: phase, starts_at: date, ends_at: date })
+      mdByKey.set(key, { natural_key: key, label: roundLabel, type: phase, starts_at: date, ends_at: date })
     } else {
       if (date < acc.starts_at) acc.starts_at = date
       if (date > acc.ends_at) acc.ends_at = date
@@ -77,7 +81,8 @@ export async function ingestStructure(db: SupabaseClient) {
 }
 
 // Per-player stats for finished fixtures missing them, paced for the rate limit.
-export async function ingestStats(db: SupabaseClient, limit = 12) {
+// force=true re-ingests matches that already have stats (use after adding new stat columns).
+export async function ingestStats(db: SupabaseClient, limit = 12, force = false) {
   const af = apiFootball()
   async function fetchPlayers(fixtureId: number) {
     for (let attempt = 0; ; attempt++) {
@@ -97,8 +102,11 @@ export async function ingestStats(db: SupabaseClient, limit = 12) {
   const { data: teamRows } = await db.from('teams').select('id, external_id')
   const teamId = new Map<number, string>((teamRows ?? []).map(r => [r.external_id, r.id]))
   const { data: ftMatches } = await db.from('matches').select('id, external_id').in('status', ['FT', 'AET', 'PEN'])
-  const { data: doneRows } = await db.from('player_match_stats').select('match_id')
-  const done = new Set((doneRows ?? []).map(r => r.match_id))
+  const done = new Set<string>()
+  if (!force) {
+    const { data: doneRows } = await db.from('player_match_stats').select('match_id')
+    for (const r of (doneRows ?? [])) done.add(r.match_id)
+  }
   const pending = (ftMatches ?? []).filter(m => !done.has(m.id))
   const batch = pending.slice(0, limit)
 
@@ -120,9 +128,30 @@ export async function ingestStats(db: SupabaseClient, limit = 12) {
       const minutes = st.games?.minutes ?? 0
       return {
         player_id: pid.get(p.player.id), match_id: m.id, minutes,
-        goals: st.goals?.total ?? 0, assists: st.goals?.assists ?? 0,
+        goals: st.goals?.total ?? 0,
+        assists: st.goals?.assists ?? 0,
         clean_sheet: (st.goals?.conceded ?? 1) === 0 && minutes > 0,
-        yellow: st.cards?.yellow ?? 0, red: st.cards?.red ?? 0, raw: st
+        yellow: st.cards?.yellow ?? 0,
+        red: st.cards?.red ?? 0,
+        shots: st.shots?.total ?? 0,
+        shots_on_target: st.shots?.on ?? 0,
+        key_passes: st.passes?.key ?? 0,
+        passes: st.passes?.total ?? 0,
+        pass_accuracy: Math.round(Number(st.passes?.accuracy) || 0),
+        tackles: st.tackles?.total ?? 0,
+        interceptions: st.tackles?.interceptions ?? 0,
+        blocks: st.tackles?.blocks ?? 0,
+        duels_won: st.duels?.won ?? 0,
+        dribbles_completed: st.dribbles?.success ?? 0,
+        fouls_drawn: st.fouls?.drawn ?? 0,
+        fouls_committed: st.fouls?.committed ?? 0,
+        saves: st.goals?.saves ?? 0,
+        offsides: st.offsides ?? 0,
+        penalties_scored: st.penalty?.scored ?? 0,
+        penalties_missed: st.penalty?.missed ?? 0,
+        penalties_saved: st.penalty?.saved ?? 0,
+        rating: Math.round(Number(st.games?.rating) * 100) / 100 || 0,
+        raw: st
       }
     }).filter(r => r.player_id))
     await db.from('player_match_stats').upsert(statInput, { onConflict: 'player_id,match_id' })

@@ -6,9 +6,8 @@ definePageMeta({
 const { selection, removeAt, isFull, autoFill, saving } = useSelection()
 
 const { data: matchdays } = await useFetch('/api/matchdays', { default: () => [] })
-const { data: board } = await useFetch('/api/leaderboard', {
-  default: () => ({ standings: [] })
-})
+const { data: board } = await useFetch('/api/leaderboard', { default: () => ({ standings: [] }) })
+const { data: mine } = await useFetch('/api/my-matchdays', { default: () => ({}) })
 
 // Current matchday = earliest not-yet-started, else the earliest one
 const now = new Date().toISOString()
@@ -20,8 +19,65 @@ const current = computed(() => matchdays.value[currentIndex.value] ?? null)
 const upcoming = computed(() => matchdays.value[currentIndex.value + 1] ?? null)
 const topThree = computed(() => board.value.standings.slice(0, 3))
 
+// Past matchdays: before the current index and the user has a selection for them
+const pastMatchdays = computed(() =>
+  matchdays.value
+    .slice(0, currentIndex.value)
+    .filter(md => mine.value[md.number])
+    .reverse()
+)
+
 function score(g) {
   return g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : 'VS'
+}
+
+// ── Past matchday stats helpers ───────────────────────────────────────────
+
+const STAT_LABELS = [
+  { key: 'goals', label: 'G' },
+  { key: 'assists', label: 'A' },
+  { key: 'key_passes', label: 'KP' },
+  { key: 'shots_on_target', label: 'SoT' },
+  { key: 'tackles', label: 'T' },
+  { key: 'interceptions', label: 'Int' },
+  { key: 'saves', label: 'Sv' },
+  { key: 'yellow', label: '🟨' },
+  { key: 'red', label: '🟥' }
+]
+
+const STAT_NAMES = {
+  goals: 'Goals', assists: 'Assists', key_passes: 'Key Passes',
+  shots_on_target: 'Shots on Target', tackles: 'Tackles',
+  interceptions: 'Interceptions', saves: 'Saves', clean_sheet: 'Clean Sheets'
+}
+
+function playerStatItems(stats) {
+  return STAT_LABELS.filter(s => (stats[s.key] ?? 0) > 0).map(s => ({ label: s.label, value: stats[s.key] }))
+}
+
+function aggregateStats(players) {
+  const agg = {}
+  for (const p of players) {
+    if (!p.stats) continue
+    for (const [k, v] of Object.entries(p.stats)) {
+      if (k === 'clean_sheet') agg.clean_sheet = (agg.clean_sheet ?? 0) + (v ? 1 : 0)
+      else agg[k] = (agg[k] ?? 0) + (Number(v) || 0)
+    }
+  }
+  return agg
+}
+
+function thresholdResults(scoringRules, agg) {
+  if (!scoringRules) return []
+  return Object.entries(scoringRules)
+    .filter(([, r]) => r && typeof r === 'object' && 'threshold' in r)
+    .map(([stat, r]) => ({
+      label: STAT_NAMES[stat] || stat,
+      threshold: r.threshold,
+      points: r.points,
+      total: agg[stat] ?? 0,
+      passed: (agg[stat] ?? 0) >= r.threshold
+    }))
 }
 </script>
 
@@ -39,7 +95,7 @@ function score(g) {
         v-if="current"
         class="flex flex-col gap-4"
       >
-        <div class="flex flex-col gap-2">
+        <div class="flex max-h-44 flex-col gap-2 overflow-y-auto">
           <MatchCard
             v-for="(g, i) in current.games"
             :key="i"
@@ -122,6 +178,119 @@ function score(g) {
       </div>
     </SectionCard>
 
+    <!-- Past Matchdays -->
+    <SectionCard
+      v-if="pastMatchdays.length"
+      title="Past Matchdays"
+      icon="i-lucide-history"
+    >
+      <div class="flex flex-col gap-4">
+        <div
+          v-for="md in pastMatchdays"
+          :key="md.number"
+          class="flex flex-col gap-3"
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-semibold">{{ md.label }}</span>
+            <template v-if="mine[md.number].total != null">
+              <UBadge
+                v-if="mine[md.number].total > 0"
+                color="success"
+                variant="subtle"
+                size="sm"
+              >
+                +{{ mine[md.number].total }} pts
+              </UBadge>
+              <UBadge
+                v-else
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              >
+                0 pts
+              </UBadge>
+            </template>
+            <span
+              v-else
+              class="text-xs text-dimmed"
+            >pending</span>
+          </div>
+
+          <!-- Threshold results -->
+          <div
+            v-if="md.challenge && mine[md.number].players.some(p => p.stats)"
+            class="flex flex-col gap-1 rounded-lg border border-default bg-elevated/40 p-2.5"
+          >
+            <p class="mb-1 text-xs font-semibold text-muted">
+              {{ md.challenge.title }}
+            </p>
+            <div
+              v-for="t in thresholdResults(md.challenge.scoring_rules, aggregateStats(mine[md.number].players))"
+              :key="t.label"
+              class="flex items-center gap-2 text-xs"
+            >
+              <UIcon
+                :name="t.passed ? 'i-lucide-circle-check' : 'i-lucide-circle-x'"
+                class="size-3.5 shrink-0"
+                :class="t.passed ? 'text-success' : 'text-muted'"
+              />
+              <span class="flex-1">{{ t.label }}</span>
+              <span class="tabular-nums text-dimmed">{{ t.total }} / {{ t.threshold }}</span>
+              <span
+                v-if="t.passed"
+                class="font-medium text-primary"
+              >+{{ t.points }}</span>
+            </div>
+          </div>
+
+          <!-- Players -->
+          <div class="flex flex-col gap-1.5">
+            <div
+              v-for="(p, pi) in mine[md.number].players"
+              :key="pi"
+              class="flex items-start gap-2 rounded-lg border border-default bg-elevated/40 p-2"
+            >
+              <UAvatar
+                :src="p.photo || undefined"
+                :alt="p.name"
+                icon="i-lucide-user"
+                size="2xs"
+                class="mt-0.5 shrink-0"
+              />
+              <div class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium">{{ p.name }}</span>
+                <div
+                  v-if="p.stats"
+                  class="mt-1 flex flex-wrap gap-1"
+                >
+                  <span class="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium tabular-nums text-dimmed">{{ p.stats.minutes }}'</span>
+                  <span
+                    v-for="s in playerStatItems(p.stats)"
+                    :key="s.label"
+                    class="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium tabular-nums"
+                  >{{ s.value }} {{ s.label }}</span>
+                  <span
+                    v-if="p.stats.clean_sheet"
+                    class="rounded bg-primary/10 px-1.5 py-0.5 text-[0.65rem] font-semibold text-primary"
+                  >CS</span>
+                </div>
+                <span
+                  v-else
+                  class="text-xs text-dimmed"
+                >pending</span>
+              </div>
+            </div>
+          </div>
+
+          <UDivider
+            v-if="pastMatchdays.indexOf(md) < pastMatchdays.length - 1"
+            class="mt-1"
+          />
+        </div>
+      </div>
+    </SectionCard>
+
     <!-- Leaderboard -->
     <SectionCard
       title="Leaderboard"
@@ -162,7 +331,7 @@ function score(g) {
       :title="`Upcoming Matchday · ${upcoming.label}`"
       icon="i-lucide-calendar-days"
     >
-      <div class="flex flex-col gap-2">
+      <div class="flex max-h-44 flex-col gap-2 overflow-y-auto">
         <MatchCard
           v-for="(g, i) in upcoming.games"
           :key="i"
